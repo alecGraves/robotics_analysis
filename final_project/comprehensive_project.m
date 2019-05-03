@@ -42,8 +42,22 @@ for i = 2:length(homogeneous_tfs)
 end
 h0_7 = cumulative_homogeneous_tfs{end};
 
-% jacobian = get_jacobian(h0_7, joint_vars) % long and expensive op
+jacobian = get_jacobian(h0_7, joint_vars) % long and expensive op
+%% play with jacobian
+sing = deg2rad([180     180     180     180     180     180     180])
+sing_jac = double(sym_replace(jacobian, joint_vars, sing))
+rank(sing_jac) % 3
+sing = deg2rad([283     163     0       44      265     258     258])
+sing_jac = double(sym_replace(jacobian, joint_vars, sing))
+rank(sing_jac) % 6
+sing = deg2rad([323,210,166,88,190,233,233])
+sing_jac = double(sym_replace(jacobian, joint_vars, sing))
+rank(sing_jac) % 6
+sing = deg2rad([140     180     180     180     180     180     180])
+sing_jac = double(sym_replace(jacobian, joint_vars, sing))
+rank(sing_jac) % 6
 
+%%
 numposes = size(qr);
 numposes = numposes(1);
 for i = 1:numposes
