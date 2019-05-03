@@ -1,3 +1,4 @@
+%% arm params
 d1 = 0.2755;
 d2 = 0.2050;
 d3 = 0.2050;
@@ -7,28 +8,53 @@ d6 = 0.1038;
 d7 = 0.1600;
 e2 = 0.0098;
 
-pi = sym(pi);
+%% useful poses
+qz = [0       8*pi/3  0       pi/3    pi/2    pi/2    pi      ]; % zero angles
+qr = [180     180     180     180     180     180     180     ;
+      0       100     280     65      10      210     210     ;
+      273     183     390     49      258     288     288     ;
+      323     210     166     88      190     233     233     ;
+      283     163     0       44      265     258     258     ];
+qr = deg2rad(qr);
+
+%% set up symbols
+pi_s = sym(pi);
+% pi = sym(pi)
 syms q1 q2 q3 q4 q5 q6 q7
 joint_vars = [q1 q2 q3 q4 q5 q6 q7];
 arrayfun(@(var) assume(var,'real'), joint_vars);
 
-h0_1 = dh_transform(0, -d1, pi/2, q1+pi);
-h1_2 = dh_transform(0, 0, pi/2, q2);
-h2_3 = dh_transform(0, -(d2+d3), pi/2, q3);
-h3_4 = dh_transform(0, -e2, pi/2, q4);
-h4_5 = dh_transform(0, -(d4+d5), pi/2, q5);
-h5_6 = dh_transform(0, 0, pi/2, q6);
-h6_7 = dh_transform(0, -(d6+d7), pi, q7+pi/2);
+%% forward kinematics
+hw_0 = to_homogeneous([1, 0, 0; 0, -1, 0; 0, 0, -1]);
+h0_1 = dh_transform(0, -d1, pi_s/2, q1+pi_s);
+h1_2 = dh_transform(0, 0, pi_s/2, q2);
+h2_3 = dh_transform(0, -(d2+d3), pi_s/2, q3);
+h3_4 = dh_transform(0, -e2, pi_s/2, q4);
+h4_5 = dh_transform(0, -(d4+d5), pi_s/2, q5);
+h5_6 = dh_transform(0, 0, pi_s/2, q6);
+h6_7 = dh_transform(0, -(d6+d7), pi_s, q7+pi_s/2);
 
-homogeneous_tfs = {h0_1, h1_2,  h2_3, h3_4, h4_5, h5_6, h6_7};
+homogeneous_tfs = {hw_0, h0_1, h1_2,  h2_3, h3_4, h4_5, h5_6, h6_7};
 cumulative_homogeneous_tfs = homogeneous_tfs;
 
 for i = 2:length(homogeneous_tfs)
     cumulative_homogeneous_tfs{i} = cumulative_homogeneous_tfs{i-1}*cumulative_homogeneous_tfs{i};
 end
-h0_7 = cumulative_homogeneous_tfs{end}
+h0_7 = cumulative_homogeneous_tfs{end};
 
-% jacobian = get_jacobian(h0_7, joint_vars)
+% jacobian = get_jacobian(h0_7, joint_vars) % long and expensive op
+
+numposes = size(qr);
+numposes = numposes(1);
+for i = 1:numposes
+    qr(i, :)
+    current = double(sym_replace(h0_7, joint_vars, qr(i, :)))*100; % numeric cm
+    position = current(1:3, 4)
+    fprintf('%f\t%f\t%f\t', position(1), position(2), position(3))
+    pause()
+end
+disp('poses complete')
+pause()
 
 %MDL_JACO2_7DOF Create model of JACO2 7DOF arm
 %
@@ -41,16 +67,8 @@ h0_7 = cumulative_homogeneous_tfs{end}
 %   qz   zero joint angle configuration.
 
 %% define DH table
+startup_rtb
 clear L
-
-d1 = .2755;
-d2 = .2050;
-d3 = .2050;
-d4 = .2073;
-d5 = .1038;
-d6 = .1038;
-d7 = .1600;
-e2 = .0098;
 
 %      th    d       a    alpha
 DH = [0     d1     0    pi/2      ;
@@ -70,14 +88,7 @@ end
 
 jaco2 = SerialLink(L, 'name', 'JACO2', 'manufacturer', 'Kinova');
 
-%% useful poses
-qz = [0       8*pi/3  0       pi/3    pi/2    pi/2    pi      ]; % zero angles
-qr = [180     180     180     180     180     180     180     ;
-      0       100     280     65      10      210     210     ;
-      273     183     390     49      258     288     288     ;
-      323     210     166     88      190     233     233     ;
-      283     163     0       44      265     258     258     ];
-qr = deg2rad(qr);
+
 
 %% initiate plots
 fig_1 = figure(1);
